@@ -33,7 +33,7 @@ func main() {
 	))
 
 	scene.AddLight(raytracer.NewAmbientLight(raytracer.Colour{0.4, 0.4, 0.4}))
-	scene.AddLight(raytracer.NewPointLight(raytracer.Colour{0.7, 0.7, 0.7}, raytracer.Vector{7, -7, 2}))
+	scene.AddLight(raytracer.NewPointLight(raytracer.Colour{0.7, 0.7, 0.7}, raytracer.Vector{7, -7, 0}))
 
 	dc := gg.NewContext(int(canvasSize.X), int(canvasSize.Y))
 
