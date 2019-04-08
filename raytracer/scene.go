@@ -37,8 +37,7 @@ func (scene *Scene) CanvasToViewport(canvasPoint Vector) Vector {
 	}
 }
 
-// TraceRay traces a ray from the observer origin toward the destination
-func (scene *Scene) TraceRay(origin Vector, destination Vector, tMin float64, tMax float64, depth int) Colour {
+func (scene *Scene) findClosestIntersection(origin Vector, destination Vector, tMin float64, tMax float64) (Object, float64) {
 	var closestT float64
 	var closestObject Object
 	for i := range scene.objects {
@@ -51,6 +50,13 @@ func (scene *Scene) TraceRay(origin Vector, destination Vector, tMin float64, tM
 			}
 		}
 	}
+	return closestObject, closestT
+}
+
+// TraceRay traces a ray from the observer origin toward the destination
+func (scene *Scene) TraceRay(origin Vector, destination Vector, tMin float64, tMax float64, depth int) Colour {
+
+	closestObject, closestT := scene.findClosestIntersection(origin, destination, tMin, tMax)
 	if closestObject == nil {
 		return scene.backgroundColour
 	}
@@ -61,7 +67,7 @@ func (scene *Scene) TraceRay(origin Vector, destination Vector, tMin float64, tM
 	l := normal.Length()
 	normal = normal.Divide(Vector{l, l, l})
 
-	localColour := closestObject.Colour().Multiply(scene.ComputeLighting(intersectionPoint, normal, destination.Reverse(), closestObject.Specularity()))
+	localColour := closestObject.Colour().Multiply(scene.computeLighting(intersectionPoint, normal, destination.Reverse(), closestObject.Specularity()))
 
 	// If we hit the recursion limit or the object is not reflective, we're done
 	reflectivity := closestObject.Reflectivity()
@@ -81,9 +87,9 @@ func reflectRay(ray Vector, normal Vector) Vector {
 	return normal.MultiplyN(2).MultiplyN(ray.DotProduct(normal)).Minus(ray)
 }
 
-func (scene *Scene) ComputeLighting(point Vector, normal Vector, toCamera Vector, specularity float64) Colour {
+func (scene *Scene) computeLighting(point Vector, normal Vector, toCamera Vector, specularity float64) Colour {
 	intensity := Colour{}
-	tMax := 0
+	tMax := 0.0
 	for _, light := range scene.lights {
 		if light.lightType == Ambient {
 			intensity = intensity.Add(light.intensity)
@@ -94,14 +100,14 @@ func (scene *Scene) ComputeLighting(point Vector, normal Vector, toCamera Vector
 				tMax = 1
 			} else {
 				lightVector = light.direction
-				tMax = 99999
+				tMax = -1
 			}
 
-			// Shadow check
-			_ = tMax
-			//shadowSphere, shadow_t = ClosestIntersection(P, L, 0.001, t_max)
-			//if shadow_sphere != NULL
-			//    continue
+			// Shadow check - is anything blocking this light?
+			shadowObject, _ := scene.findClosestIntersection(point, lightVector, 0.000001, tMax)
+			if shadowObject != nil {
+				continue
+			}
 
 			//# Diffuse
 			nl := normal.DotProduct(lightVector)

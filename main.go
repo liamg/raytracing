@@ -25,15 +25,23 @@ func main() {
 		0.3,
 	))
 	scene.AddObject(raytracer.NewSphere(
-		raytracer.Vector{X: 0.3, Y: 0.3, Z: 1.5},
-		0.4,
+		raytracer.Vector{X: 0.8, Y: -0.5, Z: 2},
+		0.1,
 		raytracer.Colour{R: 0.5, G: 1, B: 0},
+		100,
+		0.5,
+	))
+	scene.AddObject(raytracer.NewSphere(
+		raytracer.Vector{X: 0.0, Y: 500, Z: 3},
+		499,
+		raytracer.Colour{R: 0.4, G: 0.1, B: 0.5},
 		100,
 		0.5,
 	))
 
 	scene.AddLight(raytracer.NewAmbientLight(raytracer.Colour{0.4, 0.4, 0.4}))
-	scene.AddLight(raytracer.NewPointLight(raytracer.Colour{0.7, 0.7, 0.7}, raytracer.Vector{7, -7, 0}))
+	scene.AddLight(raytracer.NewPointLight(raytracer.Colour{0.7, 0.7, 0.7}, raytracer.Vector{7, -70, 0}))
+	scene.AddLight(raytracer.NewPointLight(raytracer.Colour{0.5, 0.5, 0.5}, raytracer.Vector{80, -7, 0}))
 
 	dc := gg.NewContext(int(canvasSize.X), int(canvasSize.Y))
 
