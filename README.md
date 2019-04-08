@@ -17,7 +17,7 @@ Features:
 
 The image above is rendered with:
 
-```
+```go
 package main
 
 import (
