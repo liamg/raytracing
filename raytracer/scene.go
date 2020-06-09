@@ -1,6 +1,8 @@
 package raytracer
 
-import "math"
+import (
+	"math"
+)
 
 type Scene struct {
 	canvasSize       Vector
@@ -11,13 +13,42 @@ type Scene struct {
 	lights           []Light
 }
 
-func NewScene(canvasSize Vector) *Scene {
-	return &Scene{
-		canvasSize:       canvasSize,
-		viewportSize:     Vector{X: 1, Y: 1},
-		viewportDistance: 1,
+type Option func(scene *Scene)
+
+func WithCanvasSize(size Vector) Option {
+	return func(scene *Scene) {
+		scene.canvasSize = size
+	}
+}
+
+func WithBackgroundColour(colour Colour) Option {
+	return func(scene *Scene) {
+		scene.backgroundColour = colour
+	}
+}
+
+func NewScene(options ...Option) *Scene {
+	scene := &Scene{
+		canvasSize:       Vector{X: 500, Y: 500},
+		viewportSize:     Vector{X: 1, Y: 1, Z: 1},
 		objects:          []Object{},
 		lights:           []Light{},
+		backgroundColour: Colour{0.5, 0.8, 0.88},
+	}
+	for _, option := range options {
+		option(scene)
+	}
+	return scene
+}
+
+func (scene *Scene) ResetObjects() {
+	scene.objects = []Object{}
+}
+
+func (scene *Scene) Resize(x, y int) {
+	scene.canvasSize = Vector{
+		X: float64(x),
+		Y: float64(y),
 	}
 }
 
@@ -29,57 +60,69 @@ func (scene *Scene) AddLight(light Light) {
 	scene.lights = append(scene.lights, light)
 }
 
+func (scene *Scene) ResetLighting() {
+	scene.lights = []Light{}
+}
+
 func (scene *Scene) CanvasToViewport(canvasPoint Vector) Vector {
 	return Vector{
 		X: canvasPoint.X * (scene.viewportSize.X / scene.canvasSize.X),
 		Y: canvasPoint.Y * (scene.viewportSize.Y / scene.canvasSize.Y),
-		Z: scene.viewportDistance,
+		Z: scene.viewportSize.Z,
 	}
 }
 
-func (scene *Scene) findClosestIntersection(origin Vector, destination Vector, tMin float64, tMax float64) (Object, float64) {
+func (scene *Scene) findClosestIntersection(origin Vector, direction Vector, tMin float64, tMax float64) (Object, float64) {
 	var closestT float64
 	var closestObject Object
 	for i := range scene.objects {
 		object := scene.objects[i]
-		ts := object.FindIntersections(origin, destination)
-		for _, t := range ts {
-			if t >= tMin && (t <= tMax || tMax < tMin) && (t < closestT || closestObject == nil) {
-				closestT = t
-				closestObject = object
+		ts := object.FindIntersections(origin, direction)
+		if ts != nil {
+			for _, t := range ts {
+				if t >= tMin && (t <= tMax || tMax < tMin) && (t < closestT || closestObject == nil) {
+					closestT = t
+					closestObject = object
+				}
 			}
 		}
 	}
 	return closestObject, closestT
 }
 
-// TraceRay traces a ray from the observer origin toward the destination
-func (scene *Scene) TraceRay(origin Vector, destination Vector, tMin float64, tMax float64, depth int) Colour {
+// TraceRay traces a ray from the observer origin in the given direction
+func (scene *Scene) TraceRay(origin Vector, direction Vector, tMin float64, tMax float64, depth int) (Colour, float64) {
 
-	closestObject, closestT := scene.findClosestIntersection(origin, destination, tMin, tMax)
+	//fmt.Printf("DIR %#v\n", direction)
+
+	closestObject, closestT := scene.findClosestIntersection(origin, direction, tMin, tMax)
 	if closestObject == nil {
-		return scene.backgroundColour
+		return scene.backgroundColour, tMax
 	}
-	intersectionPoint := origin.Add(destination.Multiply(Vector{closestT, closestT, closestT}))
-	normal := closestObject.NormalAtPoint(intersectionPoint)
+	intersectionPoint := origin.Add(direction.MultiplyN(closestT))
+	normal := closestObject.NormalAtPoint(origin, intersectionPoint)
 
-	// ensure vector has length 1
-	l := normal.Length()
-	normal = normal.Divide(Vector{l, l, l})
+	// TODO is this required if objects work correctly?
+	if normal.Length() == 0 {
+		panic("missing normal")
+	}
 
-	localColour := closestObject.Colour().Multiply(scene.computeLighting(intersectionPoint, normal, destination.Reverse(), closestObject.Specularity()))
+	normal = normal.Normalise()
+
+	localColour := closestObject.Colour().Multiply(scene.computeLighting(intersectionPoint, normal, direction.Reverse(), closestObject.Specularity()))
 
 	// If we hit the recursion limit or the object is not reflective, we're done
 	reflectivity := closestObject.Reflectivity()
 	if depth <= 0 || reflectivity <= 0 {
-		return localColour
+		return localColour, closestT
 	}
 
 	// Compute the reflected color
-	reflection := reflectRay(destination.Reverse(), normal)
-	reflectedColour := scene.TraceRay(intersectionPoint, reflection, 0.001, -1, depth-1)
+	reflection := reflectRay(direction.Reverse(), normal)
 
-	return localColour.MultiplyN(1 - reflectivity).Add(reflectedColour.MultiplyN(reflectivity))
+	reflectedColour, _ := scene.TraceRay(intersectionPoint, reflection, 0.001, -1, depth-1)
+
+	return localColour.MultiplyN(1 - reflectivity).Add(reflectedColour.MultiplyN(reflectivity)), closestT
 
 }
 

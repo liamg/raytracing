@@ -5,5 +5,5 @@ type Object interface {
 	Colour() Colour
 	Specularity() float64  // any number
 	Reflectivity() float64 // 0 -> 1
-	NormalAtPoint(intersectionPoint Vector) Vector
+	NormalAtPoint(origin Vector, intersectionPoint Vector) Vector
 }

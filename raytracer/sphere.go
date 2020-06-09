@@ -34,12 +34,12 @@ func (sphere *Sphere) Reflectivity() float64 {
 	return sphere.reflectivity
 }
 
-func (sphere *Sphere) FindIntersections(origin Vector, destination Vector) []float64 {
+func (sphere *Sphere) FindIntersections(origin Vector, direction Vector) []float64 {
 
 	oc := origin.Minus(sphere.position)
 
-	k1 := destination.DotProduct(destination)
-	k2 := 2 * oc.DotProduct(destination)
+	k1 := direction.DotProduct(direction)
+	k2 := 2 * oc.DotProduct(direction)
 	k3 := oc.DotProduct(oc) - (sphere.radius * sphere.radius)
 
 	discriminant := (k2 * k2) - (4 * k1 * k3)
@@ -53,6 +53,6 @@ func (sphere *Sphere) FindIntersections(origin Vector, destination Vector) []flo
 	return []float64{t1, t2}
 }
 
-func (sphere *Sphere) NormalAtPoint(intersectionPoint Vector) Vector {
+func (sphere *Sphere) NormalAtPoint(origin, intersectionPoint Vector) Vector {
 	return intersectionPoint.Minus(sphere.position)
 }
