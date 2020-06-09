@@ -76,5 +76,5 @@ func main() {
 		}
 	}
 
-	dc.SavePNG("demo.png")
+	dc.SavePNG("output.png")
 }

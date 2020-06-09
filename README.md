@@ -11,7 +11,7 @@ Features:
 
 ## Example output
 
-![](demo.png)
+![](output.png)
 
 The image above was rendered with the example code in [examples/png/main.go](examples/png/main.go)
 
